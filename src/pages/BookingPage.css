@@ -1,5 +1,6 @@
 .booking-page {
   display: flex;
+  user-select: none;
   background-color: var(--off-white);
 }
 
@@ -11,7 +12,7 @@
   max-width: 1200px;
   margin: 0 auto;
   display: flex;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 183, 255, 0.737);
   background-color: var(--white);
   flex-direction: column;
   border-radius: 12px;
@@ -46,15 +47,14 @@
   background-attachment: fixed;
   background-image: radial-gradient(
     circle at var(--x) var(--y),
-    hsla(218, 76%, 55%, 1),
+    rgb(255, 255, 255),
     transparent 8%
   );
+  box-shadow: 0 2px 10px rgba(0, 183, 255, 0.737);
 }
 
 .calendar button:hover {
-  /* background-color: var(--primary-dark); */
-  color: var(--white);
-  
+  color: var(--text-secondary);
 }
 
 .date-selector,
@@ -75,82 +75,20 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  background: var(--medium-gray);
+  background: var(--white);
   border-radius: 0.5rem;
   padding: 1rem;
 }
 
-.time-options {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(100px, 1fr));
-  gap: 0.5rem;
-  overflow-y: auto;
-  position: relative;
-  padding: 1rem;
+.time-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.time-options button.close {
-  position: fixed;
-  top: 0rem;
-  right: 0rem;
-  z-index: 10;
-  background: transparent;
-  border: none;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--dark-gray);
-  cursor: pointer;
-  padding: 1rem;
-}
-
-.time-option {
-  border: 1px solid #ddd;
-  border-radius: 0.5rem;
-  background: white;
-  cursor: pointer;
-  position: relative;
-  padding: 1rem;
-}
-
-.time-option:hover:not(.booked) {
-  border-color: var(--primary-blue);
-  background-color: var(--primary-blue);
-  color: var(--white);
-}
-
-.time-option.booked {
-  background: #f8f8f8;
-  cursor: not-allowed;
-  pointer-events: none;
-  opacity: 0.7;
-}
-
-.calendar button:disabled,
-.time-option:disabled {
+.calendar button:disabled {
   cursor: not-allowed;
   display: none;
-}
-
-.time-option.selected {
-  background: #007bff;
-  color: white;
-  border-color: #0056b3;
-}
-
-.time-option.in-range {
-  background: #e3f2fd;
-  border-color: #90caf9;
-}
-
-.booked-indicator {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background: #dc3545;
-  color: white;
-  font-size: 0.7rem;
-  padding: 2px 6px;
-  border-radius: 10px;
 }
 
 .my-bookings-list {
@@ -159,9 +97,8 @@
   border-radius: 0.5rem;
   margin: 1rem;
   margin-bottom: 0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 183, 255, 0.737);
   padding: 2rem 1rem;
-
   & h1 {
     color: var(--primary-dark);
     margin-bottom: 1rem;
@@ -179,7 +116,7 @@ ul {
   border-bottom: 1px solid #eee;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: space-evenly;
   font-size: 0.95rem;
   & span {
     padding: 1rem;
@@ -200,6 +137,47 @@ li.no-bookings {
   display: flex;
   gap: 0.5rem;
   margin-left: auto;
+}
+
+.popup {
+  position: fixed;
+  top: 50px;
+  right: 100px;
+  z-index: 1000;
+  animation: fade 2.8s linear forwards;
+  background: #fff;
+  & button {
+    width: 300px;
+    height: auto;
+    display: flex;
+    justify-content: start;
+    align-items: center;
+    border-radius: 0;
+    border: none;
+  }
+}
+
+.popup button.confirm {
+  color: var(--success-green);
+}
+.popup button.delete {
+  color: var(--error-red);
+}
+
+.popup-indicator {
+  width: 300px;
+  height: 5px;
+  scale: 1;
+  position: fixed;
+  transform-origin: left;
+  animation: indicator 2.5s linear forwards;
+}
+
+.popup-indicator.confirm {
+  background: var(--success-green);
+}
+.popup-indicator.delete {
+  background: var(--error-red);
 }
 
 @media (max-width: 768px) {
@@ -233,11 +211,6 @@ li.no-bookings {
     font-size: 0.9rem;
   }
 
-  .time-options {
-    grid-template-columns: repeat(3, minmax(120px, 1fr));
-    height: 500px;
-  }
-
   .my-bookings-list {
     max-width: 100%;
     flex: 1;
@@ -246,6 +219,37 @@ li.no-bookings {
   }
 
   ul {
-    height: auto;
+    height: 200px;
+  }
+
+  .my-booking-item {
+    font-size: 0.9rem;
+    & span {
+      padding: 0.5rem;
+    }
+    & button {
+      font-size: 0.8rem;
+    }
+  }
+}
+
+@keyframes indicator {
+  0% {
+    transform: scaleX(1);
+  }
+  100% {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes fade {
+  0% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }

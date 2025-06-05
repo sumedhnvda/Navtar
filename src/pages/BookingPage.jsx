@@ -1,22 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { isBefore, startOfDay, parse, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, parseISO, set } from 'date-fns';
+import { isBefore, startOfDay, parse, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
 import Navbar from '../components/common/Navbar';
 import Modal from '../components/common/Modal';
 import './BookingPage.css';
-import { is } from 'date-fns/locale';
-
-const generateTimeSlots = () => {
-  const slots = [];
-  for (let hour = 0; hour < 24; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
-      slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
-    }
-  }
-  return slots;
-};
-
-const timeSlots = generateTimeSlots();
 
 function BookingPage() {
   const [calendarDays, setCalendarDays] = useState([]);
@@ -28,7 +15,12 @@ function BookingPage() {
   const [modalType, setModalType] = useState('');
   const [bookedSlots, setBookedSlots] = useState([]);
   const [myBookedSlots, setMyBookedSlots] = useState([]);
+  const [message, setMessage] = useState('');
+  const [popup, setPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
+
   const navigate = useNavigate();
+  const delay = 3000;
 
   useEffect(() => {
     if (timeOpen) {
@@ -56,17 +48,13 @@ function BookingPage() {
     fetch('../bookedSlots.json')
       .then(res => res.json())
       .then(data => {
-        // Parse fetched slots (date strings to Date objects)
         const parsedSlots = data.map(slot => ({
           ...slot,
           date: parseISO(slot.date),
         }));
 
-        // Get localStorage bookings
         const localStorageData = JSON.parse(localStorage.getItem('bookedSlots')) || [];
 
-        // Parse localStorage slots, date string to Date object
-        // Local slots only store startTime 
         const parsedLocalSlots = localStorageData.map(slot => ({
           ...slot,
           date: new Date(slot.date),
@@ -84,37 +72,46 @@ function BookingPage() {
     setCalendarDays(eachDayOfInterval({ start, end }));
   }, []);
 
-  const isTimeBooked = (date, time) => {
-    return bookedSlots.some(slot =>
-      isSameDay(slot.date, date) &&
-      time == slot.startTime
-    );
+  const isMyBookedRange = (startTime, endTime) => {
+    if (!startTime || !endTime || !selectedDate) return false;
+
+    const selectedStart = new Date(selectedDate);
+    const [sh, sm] = startTime.split(':').map(Number);
+    selectedStart.setHours(sh, sm, 0, 0);
+
+    const selectedEnd = new Date(selectedDate);
+    const [eh, em] = endTime.split(':').map(Number);
+    selectedEnd.setHours(eh, em, 0, 0);
+    return myBookedSlots.some(slot => {
+      if (!isSameDay(slot.date, selectedDate)) return false;
+
+      const slotStart = new Date(slot.date);
+      const [slotSh, slotSm] = slot.startTime.split(':').map(Number);
+      slotStart.setHours(slotSh, slotSm, 0, 0);
+
+      const slotEnd = new Date(slot.date);
+      const [slotEh, slotEm] = slot.endTime.split(':').map(Number);
+      slotEnd.setHours(slotEh, slotEm, 0, 0);
+      setMessage("This slot is already booked.");
+      return selectedStart < slotEnd && selectedEnd > slotStart;
+    });
   };
-
-  const isMyBooked = (date, time) => {
-    return myBookedSlots.some(slot =>
-      isSameDay(slot.date, date) &&
-      time == slot.startTime
-    );
-  };
-
-  const isPastTime = (date, time) => {
-    const now = new Date();
-
-    const [hour, minute] = time.split(':').map(Number);
-    const slotTime = new Date(date);
-    slotTime.setHours(hour, minute, 0, 0);
-
-    return isBefore(slotTime, now);
-  };
-
 
   const isTimeRangeValid = (startTime, endTime) => {
-    return !bookedSlots.some(slot =>
-      isSameDay(slot.date, selectedDate) &&
-      startTime < slot.endTime &&
-      endTime > slot.startTime
-    );
+    const newStart = parse(`${format(selectedDate, 'yyyy-MM-dd')} ${startTime}`, 'yyyy-MM-dd HH:mm', new Date());
+    const newEnd = parse(`${format(selectedDate, 'yyyy-MM-dd')} ${endTime}`, 'yyyy-MM-dd HH:mm', new Date());
+
+    if (isSameDay(Date.now(), selectedDate) && isBefore(newStart, new Date())) {
+      setMessage("You cannot book a slot in the past.");
+      return false;
+    }
+
+    return !bookedSlots.some(slot => {
+      const slotStart = parse(`${format(slot.date, 'yyyy-MM-dd')} ${slot.startTime}`, 'yyyy-MM-dd HH:mm', new Date());
+      const slotEnd = parse(`${format(slot.date, 'yyyy-MM-dd')} ${slot.endTime}`, 'yyyy-MM-dd HH:mm', new Date());
+      setMessage("This slot is already booked.");
+      return isSameDay(slot.date, selectedDate) && newStart < slotEnd && newEnd > slotStart;
+    });
   };
 
   const handleDateClick = (day) => {
@@ -122,39 +119,15 @@ function BookingPage() {
     setTimeOpen(true);
   }
 
-  const handleTimeClick = (start) => {
-    const index = timeSlots.indexOf(start);
-    let end = timeSlots[index + 1];
-    if (!end && start === "23:30") {
-      end = "00:00";
-    }
-    if (isMyBooked(selectedDate, start)) {
-      setSelectedStartTime(start);
-      setModalType('delete');
-    } else if (!end || !isTimeRangeValid(start, end)) {
-      setModalType('booked');
-    } else {
-      setSelectedStartTime(start);
-      setSelectedEndTime(end);
-      setModalType('confirm');
-    }
-
-    setIsModalOpen(true);
-  };
-
   const handleConfirm = () => {
     const newBooking = {
       date: selectedDate.toISOString(),
       startTime: selectedStartTime,
+      endTime: selectedEndTime
     };
 
-    // Retrieve existing bookings
     const existing = JSON.parse(localStorage.getItem('bookedSlots')) || [];
-
-    // Add new booking
     const updatedBookings = [...existing, newBooking];
-
-    // Save back
     localStorage.setItem('bookedSlots', JSON.stringify(updatedBookings));
 
     setMyBookedSlots(prevSlots => [
@@ -164,9 +137,14 @@ function BookingPage() {
         date: selectedDate,
       }
     ]);
-    alert(`Booking confirmed for ${format(selectedDate, 'MMMM d, yyyy')} from ${selectedStartTime} to ${selectedEndTime}`);
+    setPopupMessage(`Booking confirmed for ${format(selectedDate, 'MMMM d, yyyy')} from ${selectedStartTime} to ${selectedEndTime}`);
+    setPopup(true);
+    setTimeout(() => setPopup(false), delay);
+
+    // alert(`Booking confirmed for ${format(selectedDate, 'MMMM d, yyyy')} from ${selectedStartTime} to ${selectedEndTime}`);
     setIsModalOpen(false);
   };
+
 
   const handleDelete = () => {
     const updatedBookings = myBookedSlots.filter(
@@ -174,10 +152,14 @@ function BookingPage() {
     );
     localStorage.setItem('bookedSlots', JSON.stringify(updatedBookings));
     setMyBookedSlots(updatedBookings);
-    alert(`Booking cancelled for ${format(selectedDate, 'MMMM d, yyyy')} at ${selectedStartTime}`);
+
+    setPopupMessage(`Booking cancelled for ${format(selectedDate, 'MMMM d, yyyy')} at ${selectedStartTime}`);
+    setPopup(true);
+    setTimeout(() => setPopup(false), delay);
+
+    // alert(`Booking cancelled for ${format(selectedDate, 'MMMM d, yyyy')} at ${selectedStartTime}`);
     setIsModalOpen(false);
   };
-
 
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) {
@@ -209,36 +191,51 @@ function BookingPage() {
             })}
           </div>
 
-
-
           {selectedDate && timeOpen && (
             <div className="modal-overlay" onClick={handleOverlayClick}>
               <div className="time-container">
-                <p>Please select a time slot to book</p>
-                <div className="time-options">
-                  <button className='close' onClick={() => setTimeOpen(false)}>X</button>
-                  {timeSlots.map((time, index) => {
-                    const booked = isTimeBooked(selectedDate, time);
-                    const mybooked = isMyBooked(selectedDate, time);
-                    const pastTime = isPastTime(selectedDate, time);
-                    const isSelected = time === selectedStartTime || time === selectedEndTime;
-                    const isInRange = selectedStartTime && selectedEndTime &&
-                      time > selectedStartTime && time < selectedEndTime;
-
-                    return (
-                      <button
-                        key={index}
-                        className={`time-option ${booked ? 'booked' : ''} ${mybooked ? 'my-booked' : ''} 
-                  ${isSelected ? 'selected' : ''} 
-                  ${isInRange ? 'in-range' : ''}`}
-                        onClick={() => handleTimeClick(time, !selectedStartTime)}
-                        disabled={booked || pastTime}
-                      >
-                        {time}
-                        {(booked || mybooked) && <span className="booked-indicator">Booked</span>}
-                      </button>
-                    );
-                  })}
+                <p>Select start and end time:</p>
+                <div className="time-inputs">
+                  <label>
+                    Start Time:
+                    <input
+                      type="time"
+                      value={selectedStartTime}
+                      onChange={(e) => setSelectedStartTime(e.target.value)}
+                      min="00:00"
+                      max="23:59"
+                      step="300" required
+                    />
+                  </label>
+                  <label>
+                    End Time:
+                    <input
+                      type="time"
+                      value={selectedEndTime}
+                      onChange={(e) => setSelectedEndTime(e.target.value)}
+                      min={selectedStartTime || "00:00"}
+                      max="23:59"
+                      step="300" required
+                    />
+                  </label>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-danger" onClick={() => setTimeOpen(false)}>Cancel</button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                      if (!isTimeRangeValid(selectedStartTime, selectedEndTime) || isMyBookedRange(selectedStartTime, selectedEndTime)) {
+                        setModalType('booked');
+                        setIsModalOpen(true);
+                      } else {
+                        setModalType('confirm');
+                        setIsModalOpen(true);
+                      }
+                    }}
+                    disabled={!selectedStartTime || !selectedEndTime || selectedStartTime >= selectedEndTime}
+                  >
+                    Check Availability
+                  </button>
                 </div>
               </div>
             </div>
@@ -279,7 +276,7 @@ function BookingPage() {
             ) :
               (
                 <>
-                  <p>This slot is already booked. Please choose another one.</p>
+                  <p>{message}</p>
                   <div className="modal-footer">
                     <button className="btn btn-primary" onClick={() => setIsModalOpen(false)}>OK</button>
                   </div>
@@ -291,52 +288,71 @@ function BookingPage() {
           <h1>My Bookings</h1>
           <ul>
             {myBookedSlots.length > 0 ? (
-              myBookedSlots.filter(slot => {
+              (() => {
                 const now = new Date();
-                const [hour, minute] = slot.startTime.split(':').map(Number);
-                const slotStart = new Date(slot.date);
-                slotStart.setHours(hour, minute, 0, 0);
-                const slotEnd = new Date(slotStart);
-                slotEnd.setMinutes(slotEnd.getMinutes() + 30);
-
-                return slotEnd > now;
-              }).sort((a, b) => new Date(a.date) - new Date(b.date) || a.startTime.localeCompare(b.startTime))
-                .map((slot, index) => {
-                  const now = new Date();
+                const filteredSlots = myBookedSlots.filter(slot => {
                   const [hour, minute] = slot.startTime.split(':').map(Number);
+                  const [endhour, endminute] = slot.endTime.split(':').map(Number);
                   const slotStart = new Date(slot.date);
                   slotStart.setHours(hour, minute, 0, 0);
 
-                  const slotEnd = new Date(slotStart);
-                  slotEnd.setMinutes(slotEnd.getMinutes() + 30);
+                  const slotEnd = new Date(slot.date);
+                  slotEnd.setHours(endhour, endminute, 0, 0);
+                  return slotEnd > now;
+                });
+                if (filteredSlots.length === 0) {
+                  return <li className="no-bookings">No upcoming bookings.</li>;
+                }
+                return filteredSlots
+                  .sort((a, b) => new Date(a.date) - new Date(b.date) || a.startTime.localeCompare(b.startTime))
+                  .map((slot, index) => {
+                    const now = new Date();
+                    const [hour, minute] = slot.startTime.split(':').map(Number);
+                    const [endhour, endminute] = slot.endTime.split(':').map(Number);
+                    const slotStart = new Date(slot.date);
+                    slotStart.setHours(hour, minute, 0, 0);
 
-                  const isOngoing = now >= slotStart && now < slotEnd;
+                    const slotEnd = new Date(slot.date);
+                    slotEnd.setHours(endhour, endminute, 0, 0);
 
-                  return (
-                    <li key={index} className="my-booking-item">
-                      <span>{format(slot.date, 'MMMM d, yyyy')}</span>
-                      <span>{slot.startTime}</span>
-                      <div className="booking-actions">
-                        {isOngoing && <button className="btn btn-success" onClick={() => navigate('/consultation')}>Start</button>}
-                        <button
-                          className="btn btn-danger"
-                          onClick={() => {
-                            setSelectedDate(slot.date);
-                            setSelectedStartTime(slot.startTime);
-                            handleDelete();
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </li>
-                  )
-                })) : (
+                    const isOngoing = now >= slotStart && now < slotEnd;
+
+                    return (
+                      <li key={index} className={`my-booking-item ${isOngoing ? 'ongoing' : ''}`}>
+                        <span>{format(slot.date, 'MMMM d, yyyy')}</span>
+                        <span>{slot.startTime}</span>-<span>{slot.endTime}</span>
+                        <div className="booking-actions">
+                          <button className="btn btn-success" onClick={() => navigate('/consultation')} style={{ visibility: !isOngoing ? "hidden" : "visible" }}>Start</button>
+                          <button
+                            className="btn btn-danger"
+                            onClick={() => {
+                              setSelectedDate(slot.date);
+                              setSelectedStartTime(slot.startTime);
+                              setModalType('delete');
+                              setIsModalOpen(true);
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </li>
+                    )
+                  });
+              })()
+            ) : (
               <li className="no-bookings">No bookings found.</li>
             )}
           </ul>
         </div>
       </div >
+      {popup && (
+        <div className='popup'>
+          <button className={`btn ${modalType}`} onClick={() => setPopup(false)}>
+            {popupMessage}
+          </button>
+          <div className={`popup-indicator ${modalType}`}></div>
+        </div>
+      )}
     </>
 
   );
