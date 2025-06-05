@@ -1,224 +1,360 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, addDays, startOfToday, isToday, isSameDay } from 'date-fns';
+import { isBefore, startOfDay, parse, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
 import Navbar from '../components/common/Navbar';
 import Modal from '../components/common/Modal';
 import './BookingPage.css';
 
-// Generate 24-hour time slots in 30-minute intervals
-const generateTimeSlots = () => {
-  const slots = [];
-  for (let hour = 0; hour < 24; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
-      const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-      slots.push(time);
-    }
-  }
-  return slots;
-};
-
-const timeSlots = generateTimeSlots();
-
-// Mock booked slots with start and end times
-const bookedSlots = [
-  { 
-    date: new Date(), 
-    startTime: '09:00', 
-    endTime: '10:30'
-  },
-  { 
-    date: new Date(), 
-    startTime: '14:00', 
-    endTime: '15:30'
-  },
-  { 
-    date: addDays(new Date(), 1), 
-    startTime: '13:00', 
-    endTime: '14:30'
-  }
-];
-
 function BookingPage() {
-  const [selectedDate, setSelectedDate] = useState(startOfToday());
-  const [selectedStartTime, setSelectedStartTime] = useState(null);
-  const [selectedEndTime, setSelectedEndTime] = useState(null);
+  const [calendarDays, setCalendarDays] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedStartTime, setSelectedStartTime] = useState('');
+  const [selectedEndTime, setSelectedEndTime] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [timeOpen, setTimeOpen] = useState(false);
   const [modalType, setModalType] = useState('');
-  const navigate = useNavigate();
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [myBookedSlots, setMyBookedSlots] = useState([]);
+  const [message, setMessage] = useState('');
+  const [popup, setPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
 
-  // Generate date options for next 7 days
-  const dateOptions = Array.from({ length: 7 }, (_, index) => {
-    return addDays(startOfToday(), index);
+  const navigate = useNavigate();
+  const delay = 3000;
+
+  useEffect(() => {
+    if (timeOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [timeOpen, isModalOpen]);
+
+  const calendar = document.querySelector(".calendar");
+
+  document.addEventListener("mousemove", (e) => {
+    if (calendar) {
+      calendar.style.setProperty("--x", e.x + "px");
+      calendar.style.setProperty("--y", e.y + "px");
+    }
   });
 
-  // Check if a time slot is within any booked period
-  const isTimeBooked = (date, time) => {
-    return bookedSlots.some(slot => {
-      if (!isSameDay(slot.date, date)) return false;
-      return time >= slot.startTime && time < slot.endTime;
-    });
-  };
+  // Fetch booked slots from JSON
+  useEffect(() => {
+    fetch('../bookedSlots.json')
+      .then(res => res.json())
+      .then(data => {
+        const parsedSlots = data.map(slot => ({
+          ...slot,
+          date: parseISO(slot.date),
+        }));
 
-  // Check if selected time range overlaps with any booked slot
-  const isTimeRangeValid = (startTime, endTime) => {
-    if (!startTime || !endTime || startTime >= endTime) return false;
-    
-    return !bookedSlots.some(slot => {
+        const localStorageData = JSON.parse(localStorage.getItem('bookedSlots')) || [];
+
+        const parsedLocalSlots = localStorageData.map(slot => ({
+          ...slot,
+          date: new Date(slot.date),
+        }));
+
+        setBookedSlots(parsedSlots);
+        setMyBookedSlots(parsedLocalSlots);
+      })
+      .catch(error => console.error('Error fetching booked slots:', error));
+  }, []);
+
+  useEffect(() => {
+    const start = startOfMonth(new Date());
+    const end = endOfMonth(new Date());
+    setCalendarDays(eachDayOfInterval({ start, end }));
+  }, []);
+
+  const isMyBookedRange = (startTime, endTime) => {
+    if (!startTime || !endTime || !selectedDate) return false;
+
+    const selectedStart = new Date(selectedDate);
+    const [sh, sm] = startTime.split(':').map(Number);
+    selectedStart.setHours(sh, sm, 0, 0);
+
+    const selectedEnd = new Date(selectedDate);
+    const [eh, em] = endTime.split(':').map(Number);
+    selectedEnd.setHours(eh, em, 0, 0);
+    return myBookedSlots.some(slot => {
       if (!isSameDay(slot.date, selectedDate)) return false;
-      return (startTime < slot.endTime && endTime > slot.startTime);
+
+      const slotStart = new Date(slot.date);
+      const [slotSh, slotSm] = slot.startTime.split(':').map(Number);
+      slotStart.setHours(slotSh, slotSm, 0, 0);
+
+      const slotEnd = new Date(slot.date);
+      const [slotEh, slotEm] = slot.endTime.split(':').map(Number);
+      slotEnd.setHours(slotEh, slotEm, 0, 0);
+      setMessage("This slot is already booked.");
+      return selectedStart < slotEnd && selectedEnd > slotStart;
     });
   };
 
-  const handleTimeSelect = (time, isStart) => {
-    if (isStart) {
-      setSelectedStartTime(time);
-      setSelectedEndTime(null);
-    } else {
-      if (!selectedStartTime || time <= selectedStartTime) return;
-      
-      if (isTimeRangeValid(selectedStartTime, time)) {
-        setSelectedEndTime(time);
-        setModalType('confirm');
-        setIsModalOpen(true);
-      } else {
-        setModalType('booked');
-        setIsModalOpen(true);
-      }
+  const isTimeRangeValid = (startTime, endTime) => {
+    const newStart = parse(`${format(selectedDate, 'yyyy-MM-dd')} ${startTime}`, 'yyyy-MM-dd HH:mm', new Date());
+    const newEnd = parse(`${format(selectedDate, 'yyyy-MM-dd')} ${endTime}`, 'yyyy-MM-dd HH:mm', new Date());
+
+    if (isSameDay(Date.now(), selectedDate) && isBefore(newStart, new Date())) {
+      setMessage("You cannot book a slot in the past.");
+      return false;
     }
+
+    return !bookedSlots.some(slot => {
+      const slotStart = parse(`${format(slot.date, 'yyyy-MM-dd')} ${slot.startTime}`, 'yyyy-MM-dd HH:mm', new Date());
+      const slotEnd = parse(`${format(slot.date, 'yyyy-MM-dd')} ${slot.endTime}`, 'yyyy-MM-dd HH:mm', new Date());
+      setMessage("This slot is already booked.");
+      return isSameDay(slot.date, selectedDate) && newStart < slotEnd && newEnd > slotStart;
+    });
   };
 
-  const handleConfirmBooking = () => {
-    if (isToday(selectedDate)) {
-      navigate('/consultation');
-    } else {
-      console.log('Booking confirmed for:', {
-        date: format(selectedDate, 'yyyy-MM-dd'),
-        startTime: selectedStartTime,
-        endTime: selectedEndTime
-      });
-      setIsModalOpen(false);
-      alert(`Booking confirmed for ${format(selectedDate, 'MMMM d, yyyy')} from ${selectedStartTime} to ${selectedEndTime}`);
+  const handleDateClick = (day) => {
+    setSelectedDate(day);
+    setTimeOpen(true);
+  }
+
+  const handleConfirm = () => {
+    const newBooking = {
+      date: selectedDate.toISOString(),
+      startTime: selectedStartTime,
+      endTime: selectedEndTime
+    };
+
+    const existing = JSON.parse(localStorage.getItem('bookedSlots')) || [];
+    const updatedBookings = [...existing, newBooking];
+    localStorage.setItem('bookedSlots', JSON.stringify(updatedBookings));
+
+    setMyBookedSlots(prevSlots => [
+      ...prevSlots,
+      {
+        ...newBooking,
+        date: selectedDate,
+      }
+    ]);
+    setPopupMessage(`Booking confirmed for ${format(selectedDate, 'MMMM d, yyyy')} from ${selectedStartTime} to ${selectedEndTime}`);
+    setPopup(true);
+    setTimeout(() => setPopup(false), delay);
+
+    // alert(`Booking confirmed for ${format(selectedDate, 'MMMM d, yyyy')} from ${selectedStartTime} to ${selectedEndTime}`);
+    setIsModalOpen(false);
+  };
+
+
+  const handleDelete = () => {
+    const updatedBookings = myBookedSlots.filter(
+      slot => !(isSameDay(slot.date, selectedDate) && slot.startTime === selectedStartTime)
+    );
+    localStorage.setItem('bookedSlots', JSON.stringify(updatedBookings));
+    setMyBookedSlots(updatedBookings);
+
+    setPopupMessage(`Booking cancelled for ${format(selectedDate, 'MMMM d, yyyy')} at ${selectedStartTime}`);
+    setPopup(true);
+    setTimeout(() => setPopup(false), delay);
+
+    // alert(`Booking cancelled for ${format(selectedDate, 'MMMM d, yyyy')} at ${selectedStartTime}`);
+    setIsModalOpen(false);
+  };
+
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      setTimeOpen(false);
     }
   };
 
   return (
-    <div className="booking-page">
+    <>
       <Navbar />
-      
-      <div className="booking-container container">
-        <div className="booking-header">
+      <div className="booking-page">
+        <div className="booking-container" >
           <h1>Book Navatar Robot</h1>
-          <p className="booking-subtitle">
-            Select a date and time range to schedule your robot-assisted patient consultations
-          </p>
-        </div>
-        
-        <div className="booking-content">
-          <div className="date-selector card">
-            <h3>Select Date</h3>
-            <div className="date-options">
-              {dateOptions.map((date, index) => (
+          <p>Select a date from the dates below:</p>
+
+          <div className="calendar">
+            {calendarDays.map((day, index) => {
+              const isPast = isBefore(day, startOfDay(new Date()));
+              return (
                 <button
                   key={index}
-                  className={`date-option ${isSameDay(date, selectedDate) ? 'selected' : ''}`}
-                  onClick={() => setSelectedDate(date)}
+                  className={`calendar-day ${isSameDay(day, selectedDate) ? 'selected' : ''} ${isPast ? 'past' : ''}`}
+                  onClick={() => !isPast && handleDateClick(day)}
+                  disabled={isPast}
                 >
-                  <div className="date-weekday">{format(date, 'EEE')}</div>
-                  <div className="date-day">{format(date, 'd')}</div>
-                  <div className="date-month">{format(date, 'MMM')}</div>
+                  {format(day, 'd')}
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
-          
-          <div className="time-selector card">
-            <h3>Select Time Range</h3>
-            <div className="time-range-instructions">
-              {!selectedStartTime ? 
-                "First, select a start time" : 
-                !selectedEndTime ? 
-                "Now, select an end time" : 
-                "Time range selected"}
-            </div>
-            <div className="time-options">
-              {timeSlots.map((time, index) => {
-                const booked = isTimeBooked(selectedDate, time);
-                const isSelected = time === selectedStartTime || time === selectedEndTime;
-                const isInRange = selectedStartTime && selectedEndTime && 
-                                time > selectedStartTime && time < selectedEndTime;
-                
-                return (
+
+          {selectedDate && timeOpen && (
+            <div className="modal-overlay" onClick={handleOverlayClick}>
+              <div className="time-container">
+                <p>Select start and end time:</p>
+                <div className="time-inputs">
+                  <label>
+                    Start Time:
+                    <input
+                      type="time"
+                      value={selectedStartTime}
+                      onChange={(e) => setSelectedStartTime(e.target.value)}
+                      min="00:00"
+                      max="23:59"
+                      step="300" required
+                    />
+                  </label>
+                  <label>
+                    End Time:
+                    <input
+                      type="time"
+                      value={selectedEndTime}
+                      onChange={(e) => setSelectedEndTime(e.target.value)}
+                      min={selectedStartTime || "00:00"}
+                      max="23:59"
+                      step="300" required
+                    />
+                  </label>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-danger" onClick={() => setTimeOpen(false)}>Cancel</button>
                   <button
-                    key={index}
-                    className={`time-option ${booked ? 'booked' : ''} 
-                              ${isSelected ? 'selected' : ''} 
-                              ${isInRange ? 'in-range' : ''}`}
-                    onClick={() => handleTimeSelect(time, !selectedStartTime)}
-                    disabled={booked}
+                    className="btn btn-primary"
+                    onClick={() => {
+                      if (!isTimeRangeValid(selectedStartTime, selectedEndTime) || isMyBookedRange(selectedStartTime, selectedEndTime)) {
+                        setModalType('booked');
+                        setIsModalOpen(true);
+                      } else {
+                        setModalType('confirm');
+                        setIsModalOpen(true);
+                      }
+                    }}
+                    disabled={!selectedStartTime || !selectedEndTime || selectedStartTime >= selectedEndTime}
                   >
-                    {time}
-                    {booked && <span className="booked-indicator">Booked</span>}
+                    Check Availability
                   </button>
-                );
-              })}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Modal for Confirmation or Error */}
+          <Modal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            title={
+              modalType === 'confirm' ? 'Confirm Booking' :
+                modalType === 'delete' ? 'Cancel Booking' :
+                  'Slot Unavailable'
+            }>
+            {modalType === 'confirm' ? (
+
+              < >
+                <p>You selected:</p>
+                <strong>Date:</strong> {format(selectedDate, 'MMMM d, yyyy')}<br />
+                <strong>Time:</strong> {selectedStartTime} - {selectedEndTime}
+                <div className="modal-footer">
+                  <button className="btn btn-danger" onClick={() => setIsModalOpen(false)}>Cancel</button>
+                  <button className="btn btn-primary" onClick={handleConfirm}>
+                    {"Confirm"}
+                  </button>
+                </div>
+              </>
+            ) : modalType === 'delete' ? (
+              <>
+                <p>You have already booked this slot.</p>
+                <strong>Date:</strong> {format(selectedDate, 'MMMM d, yyyy')}<br />
+                <strong>Time:</strong> {selectedStartTime}
+                <div className="modal-footer">
+                  <button className="btn btn-danger" onClick={() => setIsModalOpen(false)}>Cancel</button>
+                  <button className="btn btn-danger" onClick={handleDelete}>Delete</button>
+                </div>
+              </>
+            ) :
+              (
+                <>
+                  <p>{message}</p>
+                  <div className="modal-footer">
+                    <button className="btn btn-primary" onClick={() => setIsModalOpen(false)}>OK</button>
+                  </div>
+                </>
+              )}
+          </Modal>
         </div>
-      </div>
-      
-      {/* Booked Slot Modal */}
-      <Modal
-        isOpen={isModalOpen && modalType === 'booked'}
-        onClose={() => setIsModalOpen(false)}
-        title="Time Slot Already Booked"
-      >
-        <p>This time slot is already booked. Please select another time.</p>
-        <div className="modal-footer">
-          <button 
-            className="btn btn-primary" 
-            onClick={() => setIsModalOpen(false)}
-          >
-            OK
-          </button>
+        <div className="my-bookings-list">
+          <h1>My Bookings</h1>
+          <ul>
+            {myBookedSlots.length > 0 ? (
+              (() => {
+                const now = new Date();
+                const filteredSlots = myBookedSlots.filter(slot => {
+                  const [hour, minute] = slot.startTime.split(':').map(Number);
+                  const [endhour, endminute] = slot.endTime.split(':').map(Number);
+                  const slotStart = new Date(slot.date);
+                  slotStart.setHours(hour, minute, 0, 0);
+
+                  const slotEnd = new Date(slot.date);
+                  slotEnd.setHours(endhour, endminute, 0, 0);
+                  return slotEnd > now;
+                });
+                if (filteredSlots.length === 0) {
+                  return <li className="no-bookings">No upcoming bookings.</li>;
+                }
+                return filteredSlots
+                  .sort((a, b) => new Date(a.date) - new Date(b.date) || a.startTime.localeCompare(b.startTime))
+                  .map((slot, index) => {
+                    const now = new Date();
+                    const [hour, minute] = slot.startTime.split(':').map(Number);
+                    const [endhour, endminute] = slot.endTime.split(':').map(Number);
+                    const slotStart = new Date(slot.date);
+                    slotStart.setHours(hour, minute, 0, 0);
+
+                    const slotEnd = new Date(slot.date);
+                    slotEnd.setHours(endhour, endminute, 0, 0);
+
+                    const isOngoing = now >= slotStart && now < slotEnd;
+
+                    return (
+                      <li key={index} className={`my-booking-item ${isOngoing ? 'ongoing' : ''}`}>
+                        <span>{format(slot.date, 'MMMM d, yyyy')}</span>
+                        <span>{slot.startTime}</span>-<span>{slot.endTime}</span>
+                        <div className="booking-actions">
+                          <button className="btn btn-success" onClick={() => navigate('/consultation')} style={{ visibility: !isOngoing ? "hidden" : "visible" }}>Start</button>
+                          <button
+                            className="btn btn-danger"
+                            onClick={() => {
+                              setSelectedDate(slot.date);
+                              setSelectedStartTime(slot.startTime);
+                              setModalType('delete');
+                              setIsModalOpen(true);
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </li>
+                    )
+                  });
+              })()
+            ) : (
+              <li className="no-bookings">No bookings found.</li>
+            )}
+          </ul>
         </div>
-      </Modal>
-      
-      {/* Confirm Booking Modal */}
-      <Modal
-        isOpen={isModalOpen && modalType === 'confirm'}
-        onClose={() => setIsModalOpen(false)}
-        title="Confirm Booking"
-      >
-        <p>
-          You are about to book the Navatar robot for:
-          <br /><br />
-          <strong>Date:</strong> {selectedDate && format(selectedDate, 'MMMM d, yyyy')}
-          <br />
-          <strong>Time:</strong> {selectedStartTime} - {selectedEndTime}
-        </p>
-        
-        {isToday(selectedDate) && (
-          <div className="immediate-notice">
-            Since you selected today, you'll be immediately connected to the robot for consultation.
-          </div>
-        )}
-        
-        <div className="modal-footer">
-          <button 
-            className="btn btn-secondary" 
-            onClick={() => setIsModalOpen(false)}
-          >
-            Cancel
+      </div >
+      {popup && (
+        <div className='popup'>
+          <button className={`btn ${modalType}`} onClick={() => setPopup(false)}>
+            {popupMessage}
           </button>
-          <button 
-            className="btn btn-primary" 
-            onClick={handleConfirmBooking}
-          >
-            {isToday(selectedDate) ? 'Start Now' : 'Confirm Booking'}
-          </button>
+          <div className={`popup-indicator ${modalType}`}></div>
         </div>
-      </Modal>
-    </div>
+      )}
+    </>
+
   );
 }
 

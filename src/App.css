@@ -42,12 +42,18 @@
   border-radius: 4px;
   font-weight: 500;
   border: none;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  border: 2px solid currentColor;
+  background: transparent;
+}
+
+.btn:hover {
+  color: var(--white);
+  scale: 1.1;
 }
 
 .btn-primary {
-  background-color: var(--primary-blue);
-  color: var(--white);
+  color: var(--primary-blue);
 }
 
 .btn-primary:hover {
@@ -55,13 +61,26 @@
 }
 
 .btn-secondary {
-  background-color: var(--white);
   color: var(--primary-blue);
-  border: 1px solid var(--primary-blue);
 }
 
 .btn-secondary:hover {
-  background-color: var(--off-white);
+  background: var(--primary-blue);
+}
+
+.btn-danger {
+  color: var(--danger-red);
+}
+
+.btn-danger:hover {
+  background: var(--danger-red);
+}
+
+.btn-success {
+  color: var(--success-green);
+}
+.btn-success:hover {
+  background-color: var(--success-green);
 }
 
 .btn-lg {
