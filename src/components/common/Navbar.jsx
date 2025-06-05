@@ -1,15 +1,10 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import './Navbar.css';
+import { useUser, SignOutButton, SignedIn, SignedOut, SignInButton } from '@clerk/clerk-react';
 
 function Navbar() {
-  const { user, logout } = useAuth();
+  const { user } = useUser();
   const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
 
   return (
     <nav className="navbar">
@@ -17,22 +12,24 @@ function Navbar() {
         <div className="navbar-logo" onClick={() => navigate('/')}>
           <span className="logo-text">Navatar</span>
         </div>
-        
-        {user ? (
+
+        <SignedIn>
           <div className="navbar-user">
-            <span className="user-welcome">Welcome, Dr. {user.name}</span>
-            <button className="btn btn-secondary btn-sm" onClick={handleLogout}>
-              Logout
-            </button>
+            <span className="user-welcome">Welcome, Dr. {user?.firstName}</span>
+            <SignOutButton>
+              <button className="btn btn-secondary btn-sm">Logout</button>
+            </SignOutButton>
           </div>
-        ) : (
-          <button 
-            className="btn btn-primary btn-sm" 
+        </SignedIn>
+
+        <SignedOut>
+          <button
+            className="btn btn-primary btn-sm"
             onClick={() => navigate('/login')}
           >
             Login
           </button>
-        )}
+        </SignedOut>
       </div>
     </nav>
   );

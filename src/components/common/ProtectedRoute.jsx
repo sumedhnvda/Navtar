@@ -1,14 +1,15 @@
+import { useAuth } from '@clerk/clerk-react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+
 
 function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
 
-  if (loading) {
+  if (!isLoaded) {
     return <div className="loading-spinner">Loading...</div>;
   }
 
-  if (!isAuthenticated()) {
+  if (!isSignedIn) {
     return <Navigate to="/login" replace />;
   }
 
