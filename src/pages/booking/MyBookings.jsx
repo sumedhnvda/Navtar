@@ -36,7 +36,6 @@ function MyBookings({ myBookedSlots, onSelectBookingForCancellation }) {
                 const diffInMinutes = (slotStart - now) / 60000 + 1;
                 const slotId = slot.startTime + slot.date;
 
-                console.log(`Checking top slot: ${slotId}, Time until start: ${diffInMinutes} minutes`);
                 if (diffInMinutes >= 0 && diffInMinutes <= 30) {
                     const interval = [1, 5, 10, 30].find(i => Math.abs(diffInMinutes - i) < 0.5);
                     if (interval) {
