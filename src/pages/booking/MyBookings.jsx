@@ -22,6 +22,10 @@ function MyBookings({ myBookedSlots, onSelectBookingForCancellation }) {
 
     // Check for reminders
     useEffect(() => {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
         const checkReminders = () => {
             const now = new Date();
             let foundReminder = null;
@@ -33,17 +37,18 @@ function MyBookings({ myBookedSlots, onSelectBookingForCancellation }) {
                 const slotStart = new Date(slot.date);
                 slotStart.setHours(startHour, startMinute, 0, 0);
 
-                const diffInMinutes = (slotStart - now) / 60000 + 1;
+                const diffInMinutes = (slotStart - now) / 60000 + 0.8;
+                console.log(`Time until next booking: ${Math.floor(diffInMinutes)} minutes`);
                 const slotId = slot.startTime + slot.date;
 
-                if (diffInMinutes >= 0 && diffInMinutes <= 30) {
-                    const interval = [1, 5, 10, 30].find(i => Math.abs(diffInMinutes - i) < 0.5);
+                if (diffInMinutes >= 0 && diffInMinutes <= 30 && (Math.floor(diffInMinutes) == 0 || Math.floor(diffInMinutes) == 1) || (Math.floor(diffInMinutes) == 5) || (Math.floor(diffInMinutes) == 10) || (Math.floor(diffInMinutes) == 30)) {
+                    const interval = [1, 5, 10, 30].find(i => Math.abs(diffInMinutes - i) < 0.8);
                     if (interval) {
                         if (!newNotifiedIntervals[slotId] || !newNotifiedIntervals[slotId].includes(interval)) {
-                            if (interval === 1) {
-                                foundReminder = Math.floor(diffInMinutes) > 0 ? `Your session with Navatar starts in ${Math.floor(diffInMinutes)} minute! Almost time!` : 'Your session with Navatar starts now!';
+                            if (interval === 1 && diffInMinutes == 1) {
+                                foundReminder = Math.floor(diffInMinutes) > 0 ? `Your session with Navatar starts in ${Math.floor(diffInMinutes)} minute! Almost time!` : 'Your session with Navatar started!';
                             } else {
-                                foundReminder = Math.floor(diffInMinutes) > 0 ? `Your session with Navatar starts in ${Math.floor(diffInMinutes)} minutes! Be Ready!` : 'Your session with Navatar starts now!';
+                                foundReminder = Math.floor(diffInMinutes) > 0 ? `Your session with Navatar starts in ${Math.floor(diffInMinutes)} minutes! Be Ready!` : 'Your session with Navatar started!';
                             }
 
                             newNotifiedIntervals[slotId] = [...(newNotifiedIntervals[slotId] || []), interval];
@@ -55,16 +60,23 @@ function MyBookings({ myBookedSlots, onSelectBookingForCancellation }) {
             setShowReminder(foundReminder !== null);
             if (foundReminder) {
                 setReminder(foundReminder);
+                // Show browser notification if permission is granted
+                // if ('Notification' in window) {
+                //     if (Notification.permission === 'granted') {
+                //         new Notification(foundReminder);
+                //     }
+                // }
             }
             setNotifiedIntervals(newNotifiedIntervals);
         };
 
+
         checkReminders();
-        const interval = setInterval(checkReminders, 25000);
+        // Check reminders every minute
+        const interval = setInterval(checkReminders, 30000);
         return () => clearInterval(interval);
     }, [myBookedSlots]);
 
-    // If there are no booked slots, show a message
     if (myBookedSlots.length === 0 || upcomingBookings.length === 0) {
         return (
             <div className="my-bookings-list">
