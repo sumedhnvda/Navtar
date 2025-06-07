@@ -23,6 +23,9 @@ function CalendarGrid({ calendarDays, selectedDate, onDateClick }) {
           <button
             key={index}
             className={`calendar-day ${isSameDay(day, selectedDate) ? 'selected' : ''} ${isPast ? 'past' : ''}`}
+            style={{
+              '--delay': `${index * 0.2}s`
+            }}
             onClick={() => !isPast && onDateClick(day)}
             disabled={isPast}
           >

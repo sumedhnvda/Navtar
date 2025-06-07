@@ -51,6 +51,7 @@
     transparent 8%
   );
   box-shadow: 0 2px 10px rgba(0, 183, 255, 0.737);
+  animation: fadeIn var(--delay) ease-in-out, slideInUp var(--delay) ease-in-out;
 }
 
 .calendar button:hover {
@@ -101,6 +102,9 @@
   margin-bottom: 0;
   box-shadow: 0 2px 10px rgba(0, 183, 255, 0.737);
   padding: 2rem 1rem;
+  & p {
+    text-align: center;
+  }
 }
 
 .my-bookings-list h1 {
@@ -121,6 +125,7 @@ ul {
   align-items: center;
   justify-content: space-evenly;
   font-size: 0.95rem;
+  animation: fadeIn var(--delay) ease-in-out, slideInUp var(--delay) ease-in-out;
 }
 
 .my-booking-item span {
@@ -160,6 +165,8 @@ li.no-bookings {
   align-items: center;
   border-radius: 0;
   border: none;
+  background: #fff;
+  padding: 1rem;
 }
 
 .popup button.confirm {
@@ -179,12 +186,34 @@ li.no-bookings {
   animation: indicator 2.5s linear forwards;
 }
 
-.popup-indicator.confirm {
+.popup-indicator.success {
   background: var(--success-green);
 }
 
-.popup-indicator.delete {
+.popup-indicator.error {
   background: var(--error-red);
+}
+
+.popup.reminder {
+  animation: none;
+  width: auto;
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  right: 20px;
+  background: yellow;
+  color: orangered;
+  animation: fadeIn 0.5s ease-in-out, slideInUp 0.5s ease-in-out;
+  & button {
+    width: 10px;
+    padding: 0;
+    background: transparent;
+    font-size: 1.5rem;
+    margin-left: 1rem;
+    &:hover {
+      color: var(--error-red);
+    }
+  }
 }
 
 @media (max-width: 768px) {

@@ -3,7 +3,7 @@ function NotificationPopup({ isOpen, message, type, onClose }) {
 
   return (
     <div className='popup'>
-      <button className={`btn ${type}`} onClick={onClose}>
+      <button className={`popup-content ${type}`} onClick={onClose}>
         {message}
       </button>
       <div className={`popup-indicator ${type}`}></div>

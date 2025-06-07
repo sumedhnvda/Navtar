@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
-    isBefore, startOfDay, parse, format,
+    isBefore, parse, format,
     startOfMonth, endOfMonth, eachDayOfInterval,
     isSameDay, parseISO
 } from 'date-fns';
@@ -32,7 +31,6 @@ function BookingPage() {
     const [popupMessage, setPopupMessage] = useState('');
     const [popupType, setPopupType] = useState('');
 
-    const navigate = useNavigate();
     const delay = 3000;
 
     useEffect(() => {
@@ -115,16 +113,50 @@ function BookingPage() {
     };
 
     const handleConfirmBooking = () => {
+        if (!selectedDate || !selectedStartTime || !selectedEndTime) {
+            setPopupMessage('Please select a date and both start and end times.');
+            setPopupType('error');
+            setPopup(true);
+            setTimeout(() => setPopup(false), delay);
+            return;
+        }
+
         const newBooking = {
             date: selectedDate.toISOString(),
             startTime: selectedStartTime,
             endTime: selectedEndTime
         };
+
+        // Prevent duplicate booking
+        const isDuplicate = myBookedSlots.some(slot =>
+            isSameDay(new Date(slot.date), selectedDate) &&
+            slot.startTime === selectedStartTime &&
+            slot.endTime === selectedEndTime
+        );
+
+        if (isDuplicate) {
+            setPopupMessage('This time slot is already booked.');
+            setPopupType('error');
+            setPopup(true);
+            setTimeout(() => setPopup(false), delay);
+            return;
+        }
+
         const updatedMyBookings = [...myBookedSlots, { ...newBooking, date: new Date(newBooking.date) }];
-        localStorage.setItem('bookedSlots', JSON.stringify(updatedMyBookings.map(b => ({ ...b, date: new Date(b.date).toISOString() }))));
-        setMyBookedSlots(updatedMyBookings);
-        setPopupMessage(`Booking confirmed for ${format(selectedDate, 'MMMM d, yyyy')} from ${selectedStartTime} to ${selectedEndTime}`);
-        setPopupType('confirm');
+
+        try {
+            localStorage.setItem('bookedSlots', JSON.stringify(updatedMyBookings.map(b => ({
+                ...b,
+                date: new Date(b.date).toISOString()
+            }))));
+            setMyBookedSlots(updatedMyBookings);
+            setPopupMessage(`Booking confirmed for ${format(selectedDate, 'MMMM d, yyyy')} from ${selectedStartTime} to ${selectedEndTime}`);
+            setPopupType('success');
+        } catch (error) {
+            setPopupMessage('Failed to save booking. Please try again.');
+            setPopupType('error');
+        }
+
         setPopup(true);
         setTimeout(() => setPopup(false), delay);
         setIsActionModalOpen(false);
@@ -140,13 +172,41 @@ function BookingPage() {
     };
 
     const handleDeleteBooking = () => {
+        if (!selectedDate || !selectedStartTime || !selectedEndTime) {
+            setPopupMessage('Invalid booking details. Cannot delete.');
+            setPopupType('error');
+            setPopup(true);
+            setTimeout(() => setPopup(false), delay);
+            return;
+        }
+
         const bookingsAfterDeletion = myBookedSlots.filter(
-            slot => !(isSameDay(new Date(slot.date), selectedDate) && slot.startTime === selectedStartTime && slot.endTime === selectedEndTime)
+            slot => !(isSameDay(new Date(slot.date), selectedDate) &&
+                slot.startTime === selectedStartTime &&
+                slot.endTime === selectedEndTime)
         );
-        localStorage.setItem('bookedSlots', JSON.stringify(bookingsAfterDeletion.map(b => ({ ...b, date: new Date(b.date).toISOString() }))));
-        setMyBookedSlots(bookingsAfterDeletion);
-        setPopupMessage(`Booking cancelled for ${format(selectedDate, 'MMMM d, yyyy')} at ${selectedStartTime}`);
-        setPopupType('delete');
+
+        if (bookingsAfterDeletion.length === myBookedSlots.length) {
+            setPopupMessage('Booking not found or already deleted.');
+            setPopupType('error');
+            setPopup(true);
+            setTimeout(() => setPopup(false), delay);
+            return;
+        }
+
+        try {
+            localStorage.setItem('bookedSlots', JSON.stringify(bookingsAfterDeletion.map(b => ({
+                ...b,
+                date: new Date(b.date).toISOString()
+            }))));
+            setMyBookedSlots(bookingsAfterDeletion);
+            setPopupMessage(`Booking cancelled for ${format(selectedDate, 'MMMM d, yyyy')} at ${selectedStartTime}`);
+            setPopupType('success');
+        } catch (error) {
+            setPopupMessage('Failed to update bookings. Please try again.');
+            setPopupType('error');
+        }
+
         setPopup(true);
         setTimeout(() => setPopup(false), delay);
         setIsActionModalOpen(false);
