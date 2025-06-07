@@ -6,7 +6,10 @@ function Login() {
     <div className="login-page">
       <div className="login-container">
         <div className="login-card">
-          <SignIn  signUpUrl='/signup' forceRedirectUrl={"/landingpage"} />
+          <SignIn 
+            signUpUrl="/signup"
+            forceRedirectUrl={"/landingpage"}
+          />
         </div>
       </div>
     </div>

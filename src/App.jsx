@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import BookingPage from './pages/BookingPage';
 import VideoConsultation from './pages/VideoConsultation';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import Signup from './pages/Signup';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} /> 
         <Route 
           path="/booking" 
           element={
