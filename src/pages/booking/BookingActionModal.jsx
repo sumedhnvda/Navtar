@@ -31,7 +31,7 @@ function BookingActionModal({
                     </div>
                 </div>
             )}
-            {modalType === 'delete' && selectedDate && (
+            {modalType === 'delete' && selectedDate && !isNaN(selectedDate.getTime()) && (
                 <div className='modal-body'>
                     <p>Are you sure you want to cancel this booking?</p>
                     <strong>Date:</strong> {format(selectedDate, 'MMMM d, yyyy')}<br />

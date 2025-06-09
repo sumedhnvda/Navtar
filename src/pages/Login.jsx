@@ -11,10 +11,10 @@ function Login() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
-  
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -22,42 +22,53 @@ function Login() {
       [name]: value
     }));
   };
-  
+
+  const demoUsers = [
+    {
+      email: 'doctor@example.com',
+      password: 'password',
+      user: { id: '1', name: 'Sarah Johnson', email: 'doctor@example.com', role: 'doctor' }
+    },
+    {
+      email: 'doctor2@example.com',
+      password: 'password',
+      user: { id: '2', name: 'John Smith', email: 'doctor2@example.com', role: 'doctor' }
+    }
+  ];
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
-    // Demo credentials check (replace with actual authentication in production)
-    if (formData.email === 'doctor@example.com' && formData.password === 'password') {
-      // Login successful
-      login({
-        id: '1',
-        name: 'Sarah Johnson',
-        email: formData.email,
-        role: 'doctor'
-      });
+
+    const matchedUser = demoUsers.find(u =>
+      u.email === formData.email && u.password === formData.password
+    );
+
+    if (matchedUser) {
+      login(matchedUser.user);
       navigate('/booking');
     } else {
       setError('Invalid credentials. Please try again.');
     }
-    
+
     setLoading(false);
   };
-  
+
+
   return (
     <div className="login-page">
       <Navbar />
-      
+
       <div className="login-container container fade-in">
         <div className="login-card card">
           <div className="login-header">
             <h2>Doctor Login</h2>
             <p>Sign in to access the Navatar remote consultation system</p>
           </div>
-          
+
           {error && <div className="error-message">{error}</div>}
-          
+
           <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
               <label htmlFor="email" className="form-label">Email</label>
@@ -72,7 +83,7 @@ function Login() {
                 placeholder="your.email@hospital.com"
               />
             </div>
-            
+
             <div className="form-group">
               <label htmlFor="password" className="form-label">Password</label>
               <input
@@ -86,10 +97,10 @@ function Login() {
                 placeholder="••••••••"
               />
             </div>
-            
+
             <div className="form-footer">
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="btn btn-primary btn-lg login-button"
                 disabled={loading}
               >
@@ -97,7 +108,7 @@ function Login() {
               </button>
             </div>
           </form>
-          
+
           <div className="login-help">
             <p>
               <small>

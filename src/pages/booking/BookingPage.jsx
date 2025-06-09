@@ -5,6 +5,7 @@ import {
     isSameDay, parseISO
 } from 'date-fns';
 
+import { getBookings, createBooking, deleteBooking } from '../../context/api';
 import Navbar from '../../components/common/Navbar';
 import CalendarGrid from './CalendarGrid';
 import TimeSelectorModal from './TimeSelectorModal';
@@ -24,13 +25,13 @@ function BookingPage() {
     const [actionModalType, setActionModalType] = useState('');
 
     const [bookedSlots, setBookedSlots] = useState([]);
-    const [myBookedSlots, setMyBookedSlots] = useState([]);
 
     const [message, setMessage] = useState('');
     const [popup, setPopup] = useState(false);
     const [popupMessage, setPopupMessage] = useState('');
     const [popupType, setPopupType] = useState('');
 
+    const currentUser = JSON.parse(localStorage.getItem('navatar_user'));
     const delay = 3000;
 
     useEffect(() => {
@@ -40,23 +41,17 @@ function BookingPage() {
     }, [isTimeSelectorOpen, isActionModalOpen]);
 
     useEffect(() => {
-        fetch('../bookedSlots.json')
-            .then(res => res.json())
+        // Fetch all bookings from the backend
+        getBookings()
             .then(data => {
-                const parsedSlots = data.map(slot => ({
-                    ...slot,
-                    date: parseISO(slot.date),
-                }));
-                setBookedSlots(parsedSlots);
-            })
-            .catch(error => console.error('Error fetching global booked slots:', error));
-
-        const localStorageData = JSON.parse(localStorage.getItem('bookedSlots')) || [];
-        const parsedLocalSlots = localStorageData.map(slot => ({
-            ...slot,
-            date: new Date(slot.date),
-        }));
-        setMyBookedSlots(parsedLocalSlots);
+                setBookedSlots(data);
+            }).catch(error => {
+                console.error('Error fetching bookings:', error);
+                setPopupMessage('Failed to load bookings.');
+                setPopupType('error');
+                setPopup(true);
+                setTimeout(() => setPopup(false), delay);
+            });
     }, []);
 
     useEffect(() => {
@@ -64,6 +59,17 @@ function BookingPage() {
         const end = endOfMonth(new Date());
         setCalendarDays(eachDayOfInterval({ start, end }));
     }, []);
+
+    const myBookings = bookedSlots.filter(slot => {
+        if (!slot.user_id) return false;
+        let userObj;
+        try {
+            userObj = JSON.parse(slot.user_id);
+        } catch {
+            return false;
+        }
+        return userObj.id === currentUser.id;
+    });
 
     const handleDateClick = (day) => {
         setSelectedDate(day);
@@ -77,14 +83,21 @@ function BookingPage() {
         const newBookingStartDateTime = parse(`${format(date, 'yyyy-MM-dd')} ${startTime}`, 'yyyy-MM-dd HH:mm', new Date());
         const newBookingEndDateTime = parse(`${format(date, 'yyyy-MM-dd')} ${endTime}`, 'yyyy-MM-dd HH:mm', new Date());
         return slotsList.some(slot => {
-            if (!isSameDay(new Date(slot.date), date)) return false;
-            const existingSlotStartDateTime = parse(`${format(new Date(slot.date), 'yyyy-MM-dd')} ${slot.startTime}`, 'yyyy-MM-dd HH:mm', new Date());
-            const existingSlotEndDateTime = parse(`${format(new Date(slot.date), 'yyyy-MM-dd')} ${slot.endTime}`, 'yyyy-MM-dd HH:mm', new Date());
+            if (!isSameDay(parseISO(slot.date), date)) return false;
+            const existingSlotStartDateTime = parse(`${format(parseISO(slot.date), 'yyyy-MM-dd')} ${slot.start_time}`, 'yyyy-MM-dd HH:mm', new Date());
+            const existingSlotEndDateTime = parse(`${format(parseISO(slot.date), 'yyyy-MM-dd')} ${slot.end_time}`, 'yyyy-MM-dd HH:mm', new Date());
             return newBookingStartDateTime < existingSlotEndDateTime && newBookingEndDateTime > existingSlotStartDateTime;
         });
     };
 
     const handleCheckAvailability = () => {
+        if (!selectedDate || !selectedStartTime || !selectedEndTime) {
+            setPopupMessage('Please select a date and both start and end times.');
+            setPopupType('error');
+            setPopup(true);
+            setTimeout(() => setPopup(false), delay);
+            return;
+        }
         const newStart = parse(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedStartTime}`, 'yyyy-MM-dd HH:mm', new Date());
         if (isSameDay(Date.now(), selectedDate) && isBefore(newStart, new Date())) {
             setMessage("You cannot book a slot in the past.");
@@ -94,14 +107,7 @@ function BookingPage() {
             return;
         }
         if (isSlotOverlapping(selectedDate, selectedStartTime, selectedEndTime, bookedSlots)) {
-            setMessage("This slot is already booked by someone else.");
-            setActionModalType('booked');
-            setIsActionModalOpen(true);
-            setIsTimeSelectorOpen(false);
-            return;
-        }
-        if (isSlotOverlapping(selectedDate, selectedStartTime, selectedEndTime, myBookedSlots)) {
-            setMessage("You have already booked a slot that overlaps with this time.");
+            setMessage("This slot is already booked.");
             setActionModalType('booked');
             setIsActionModalOpen(true);
             setIsTimeSelectorOpen(false);
@@ -112,7 +118,7 @@ function BookingPage() {
         setIsTimeSelectorOpen(false);
     };
 
-    const handleConfirmBooking = () => {
+    const handleConfirmBooking = async () => {
         if (!selectedDate || !selectedStartTime || !selectedEndTime) {
             setPopupMessage('Please select a date and both start and end times.');
             setPopupType('error');
@@ -122,56 +128,46 @@ function BookingPage() {
         }
 
         const newBooking = {
-            date: selectedDate.toISOString(),
-            startTime: selectedStartTime,
-            endTime: selectedEndTime
+            date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
+            start_time: selectedStartTime,
+            end_time: selectedEndTime,
+            user_id: localStorage.getItem('navatar_user')
+
         };
 
-        // Prevent duplicate booking
-        const isDuplicate = myBookedSlots.some(slot =>
-            isSameDay(new Date(slot.date), selectedDate) &&
-            slot.startTime === selectedStartTime &&
-            slot.endTime === selectedEndTime
-        );
-
-        if (isDuplicate) {
-            setPopupMessage('This time slot is already booked.');
-            setPopupType('error');
-            setPopup(true);
-            setTimeout(() => setPopup(false), delay);
-            return;
-        }
-
-        const updatedMyBookings = [...myBookedSlots, { ...newBooking, date: new Date(newBooking.date) }];
-
         try {
-            localStorage.setItem('bookedSlots', JSON.stringify(updatedMyBookings.map(b => ({
-                ...b,
-                date: new Date(b.date).toISOString()
-            }))));
-            setMyBookedSlots(updatedMyBookings);
+            const createdBooking = await createBooking(newBooking);
             setPopupMessage(`Booking confirmed for ${format(selectedDate, 'MMMM d, yyyy')} from ${selectedStartTime} to ${selectedEndTime}`);
             setPopupType('success');
+            getBookings().then(setBookedSlots);
         } catch (error) {
             setPopupMessage('Failed to save booking. Please try again.');
             setPopupType('error');
         }
-
         setPopup(true);
         setTimeout(() => setPopup(false), delay);
         setIsActionModalOpen(false);
-        resetSelection();
     };
 
     const handleSelectBookingForCancellation = (slotToCancel) => {
-        setSelectedDate(new Date(slotToCancel.date));
-        setSelectedStartTime(slotToCancel.startTime);
-        setSelectedEndTime(slotToCancel.endTime);
+        if (!slotToCancel || !slotToCancel.date) {
+            console.error('Invalid slotToCancel or missing date:', slotToCancel);
+            return;
+        }
+        const date = new Date(slotToCancel.date);
+        if (isNaN(date.getTime())) {
+            console.error('Invalid date:', slotToCancel.date);
+            return;
+        }
+        setSelectedDate(date);
+        setSelectedStartTime(slotToCancel.start_time);
+        setSelectedEndTime(slotToCancel.end_time);
         setActionModalType('delete');
         setIsActionModalOpen(true);
     };
 
-    const handleDeleteBooking = () => {
+
+    const handleDeleteBooking = async () => {
         if (!selectedDate || !selectedStartTime || !selectedEndTime) {
             setPopupMessage('Invalid booking details. Cannot delete.');
             setPopupType('error');
@@ -180,13 +176,13 @@ function BookingPage() {
             return;
         }
 
-        const bookingsAfterDeletion = myBookedSlots.filter(
-            slot => !(isSameDay(new Date(slot.date), selectedDate) &&
-                slot.startTime === selectedStartTime &&
-                slot.endTime === selectedEndTime)
+        const bookingToDelete = bookedSlots.find(slot =>
+            slot.date === format(selectedDate, 'yyyy-MM-dd') &&
+            slot.start_time === selectedStartTime &&
+            slot.end_time === selectedEndTime
         );
 
-        if (bookingsAfterDeletion.length === myBookedSlots.length) {
+        if (!bookingToDelete) {
             setPopupMessage('Booking not found or already deleted.');
             setPopupType('error');
             setPopup(true);
@@ -195,28 +191,17 @@ function BookingPage() {
         }
 
         try {
-            localStorage.setItem('bookedSlots', JSON.stringify(bookingsAfterDeletion.map(b => ({
-                ...b,
-                date: new Date(b.date).toISOString()
-            }))));
-            setMyBookedSlots(bookingsAfterDeletion);
+            await deleteBooking(bookingToDelete.id);
             setPopupMessage(`Booking cancelled for ${format(selectedDate, 'MMMM d, yyyy')} at ${selectedStartTime}`);
             setPopupType('success');
+            getBookings().then(setBookedSlots);
         } catch (error) {
             setPopupMessage('Failed to update bookings. Please try again.');
             setPopupType('error');
         }
-
         setPopup(true);
         setTimeout(() => setPopup(false), delay);
         setIsActionModalOpen(false);
-        resetSelection();
-    };
-
-    const resetSelection = () => {
-        setSelectedDate(null);
-        setSelectedStartTime('');
-        setSelectedEndTime('');
     };
 
     const handleTimeSelectorOverlayClick = (e) => {
@@ -239,9 +224,10 @@ function BookingPage() {
                     />
                 </div>
                 <MyBookings
-                    myBookedSlots={myBookedSlots}
+                    bookings={myBookings}
                     onSelectBookingForCancellation={handleSelectBookingForCancellation}
                 />
+
             </div>
             <TimeSelectorModal
                 isOpen={isTimeSelectorOpen}
