@@ -4,7 +4,7 @@ import './App.css'
 import { AuthProvider } from './context/AuthContext'
 import LandingPage from './pages/LandingPage'
 import Login from './pages/Login'
-import BookingPage from './pages/booking/BookingPage'
+import BookingPage from './pages/Booking/BookingPage'
 import VideoConsultation from './pages/VideoConsultation'
 import ProtectedRoute from './components/common/ProtectedRoute'
 

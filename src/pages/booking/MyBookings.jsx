@@ -61,11 +61,11 @@ function MyBookings({ myBookedSlots, onSelectBookingForCancellation }) {
             if (foundReminder) {
                 setReminder(foundReminder);
                 // Show browser notification if permission is granted
-                // if ('Notification' in window) {
-                //     if (Notification.permission === 'granted') {
-                //         new Notification(foundReminder);
-                //     }
-                // }
+                if ('Notification' in window) {
+                    if (Notification.permission === 'granted') {
+                        new Notification(foundReminder);
+                    }
+                }
             }
             setNotifiedIntervals(newNotifiedIntervals);
         };
