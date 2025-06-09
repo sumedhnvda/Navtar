@@ -25,7 +25,8 @@ function BookingPage() {
     const [actionModalType, setActionModalType] = useState('');
 
     const [bookedSlots, setBookedSlots] = useState([]);
-
+    const [confirmLoading, setConfirmLoading] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [popup, setPopup] = useState(false);
     const [popupMessage, setPopupMessage] = useState('');
@@ -119,6 +120,8 @@ function BookingPage() {
     };
 
     const handleConfirmBooking = async () => {
+        setConfirmLoading(true);
+
         if (!selectedDate || !selectedStartTime || !selectedEndTime) {
             setPopupMessage('Please select a date and both start and end times.');
             setPopupType('error');
@@ -147,6 +150,7 @@ function BookingPage() {
         setPopup(true);
         setTimeout(() => setPopup(false), delay);
         setIsActionModalOpen(false);
+        setConfirmLoading(false);
     };
 
     const handleSelectBookingForCancellation = (slotToCancel) => {
@@ -168,6 +172,8 @@ function BookingPage() {
 
 
     const handleDeleteBooking = async () => {
+        setDeleteLoading(true);
+
         if (!selectedDate || !selectedStartTime || !selectedEndTime) {
             setPopupMessage('Invalid booking details. Cannot delete.');
             setPopupType('error');
@@ -202,6 +208,7 @@ function BookingPage() {
         setPopup(true);
         setTimeout(() => setPopup(false), delay);
         setIsActionModalOpen(false);
+        setDeleteLoading(false);
     };
 
     const handleTimeSelectorOverlayClick = (e) => {
@@ -250,6 +257,8 @@ function BookingPage() {
                 message={message}
                 onConfirm={handleConfirmBooking}
                 onDelete={handleDeleteBooking}
+                confirmLoading={confirmLoading}
+                deleteLoading={deleteLoading}
             />
             <NotificationPopup
                 isOpen={popup}

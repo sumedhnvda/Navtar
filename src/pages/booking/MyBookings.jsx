@@ -40,7 +40,7 @@ function MyBookings({ bookings, onSelectBookingForCancellation }) {
                 const slotStart = new Date(slot.date);
                 slotStart.setHours(startHour, startMinute, 0, 0);
 
-                const diffInMinutes = (slotStart - now) / 60000;
+                const diffInMinutes = (slotStart - now) / 60000 + 1;
                 const slotId = slot.start_time + slot.date;
 
                 if (diffInMinutes >= 0 && diffInMinutes <= 30) {
@@ -59,9 +59,9 @@ function MyBookings({ bookings, onSelectBookingForCancellation }) {
                 }
             }
 
-            setShowReminder(foundReminder !== null);
             if (foundReminder) {
                 setReminder(foundReminder);
+                setShowReminder(true);
                 if ('Notification' in window && Notification.permission === 'granted') {
                     new Notification(foundReminder);
                 }

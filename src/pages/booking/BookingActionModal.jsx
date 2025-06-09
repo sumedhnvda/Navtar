@@ -10,7 +10,9 @@ function BookingActionModal({
     selectedEndTime,
     message,
     onConfirm,
-    onDelete
+    onDelete,
+    confirmLoading = false,
+    deleteLoading = false
 }) {
     if (!isOpen) return null;
 
@@ -26,8 +28,23 @@ function BookingActionModal({
                     <strong>Date:</strong> {format(selectedDate, 'MMMM d, yyyy')}<br />
                     <strong>Time:</strong> {selectedStartTime} - {selectedEndTime}
                     <div className="modal-footer">
-                        <button className="btn btn-danger" onClick={onClose}>Cancel</button>
-                        <button className="btn btn-primary" onClick={onConfirm}>Confirm</button>
+                        <button
+                            className="btn btn-danger" onClick={onClose}
+                            disabled={confirmLoading}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="btn btn-primary" onClick={onConfirm}
+                            disabled={confirmLoading}
+                        >
+                            {confirmLoading ? (
+                                <span>
+                                    <span className="spinner" style={{ marginRight: '8px' }}></span>
+                                    Processing...
+                                </span>
+                            ) : "Confirm"}
+                        </button>
                     </div>
                 </div>
             )}
@@ -37,8 +54,20 @@ function BookingActionModal({
                     <strong>Date:</strong> {format(selectedDate, 'MMMM d, yyyy')}<br />
                     <strong>Time:</strong> {selectedStartTime}
                     <div className="modal-footer">
-                        <button className="btn btn-primary" onClick={onClose}>No</button>
-                        <button className="btn btn-danger" onClick={onDelete}>Yes</button>
+                        <button className="btn btn-primary" onClick={onClose} disabled={deleteLoading}
+                        >No</button>
+                        <button
+                            className="btn btn-danger"
+                            onClick={onDelete}
+                            disabled={deleteLoading}
+                        >
+                            {deleteLoading ? (
+                                <span>
+                                    <span className="spinner" style={{ marginRight: '8px' }}></span>
+                                    Deleting...
+                                </span>
+                            ) : "Yes"}
+                        </button>
                     </div>
                 </div>
             )}
