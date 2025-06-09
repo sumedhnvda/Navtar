@@ -1,6 +1,5 @@
 import Navbar from '../components/common/Navbar';
 import VideoScreen from '../components/videoCall/VideoScreen';
-import JoystickControl from '../components/videoCall/JoystickControl';
 import './VideoConsultation.css';
 
 function VideoConsultation() {
@@ -19,9 +18,6 @@ function VideoConsultation() {
             <VideoScreen />
           </div>
           
-          <div className="controls-section">
-            <JoystickControl />
-          </div>
         </div>
         
         <div className="patient-info card">
