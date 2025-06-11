@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import './Navbar.css';
-import { useUser, SignOutButton, SignedIn, SignedOut, SignInButton } from '@clerk/clerk-react';
+import { useUser, SignOutButton, SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
 
 function Navbar() {
   const { user } = useUser();
@@ -16,9 +16,7 @@ function Navbar() {
         <SignedIn>
           <div className="navbar-user">
             <span className="user-welcome">Welcome, Dr. {user?.firstName}</span>
-            <SignOutButton>
-              <button className="btn btn-secondary btn-sm">Logout</button>
-            </SignOutButton>
+          <UserButton/>
           </div>
         </SignedIn>
 
