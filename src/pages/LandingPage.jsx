@@ -20,14 +20,7 @@ function LandingPage() {
               allowing doctors to remotely navigate to patients ward of beds for
               face-to-face consultations with patients, relatives, and nursing staff.
             </p>
-            <div className="hero-buttons slide-in-up">
-              <button 
-                className="btn btn-primary btn-lg"
-                onClick={() => navigate('/login')}
-              >
-                Login as Doctor
-              </button>
-            </div>
+            
           </div>
           
           <div className="hero-image slide-in-up">
