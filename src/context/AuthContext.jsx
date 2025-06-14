@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
       setUser(JSON.parse(storedUser));
     }
     setLoading(false);
+    
   }, []);
 
   const login = (userData) => {
