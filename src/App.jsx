@@ -6,8 +6,12 @@ import BookingPage from './pages/BookingPage';
 import VideoConsultation from './pages/VideoConsultation';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Signup from './pages/Signup';
+import AdminDashboard from './pages/AdminDashboard';
+import SuperAdminRoute from './components/common/SuperAdminRoute'; 
+import useRoleAssignment from './hooks/useRoleAssignment';
 
 function App() {
+  useRoleAssignment();
   return (
     <div className="app">
       <Routes>
@@ -29,6 +33,14 @@ function App() {
               <VideoConsultation />
             </ProtectedRoute>
           } 
+        />
+        <Route
+          path="/admin"
+          element={
+            <SuperAdminRoute>
+              <AdminDashboard />
+            </SuperAdminRoute>
+          }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

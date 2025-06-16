@@ -53,3 +53,18 @@
     display: none;
   }
 }
+.btn-admin {
+  background-color: var(--primary-blue);
+  color: white;
+  border: none;
+  padding: 0.4rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-admin:hover {
+  background-color: #004c9a; 
+}
