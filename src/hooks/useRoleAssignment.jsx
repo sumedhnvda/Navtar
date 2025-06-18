@@ -11,7 +11,7 @@ export default function useRoleAssignment() {
     const currentRole = user.unsafeMetadata?.role;
     const email = user.primaryEmailAddress?.emailAddress;
 
-    // If role is not set, assign based on email
+    
     if (!currentRole) {
       const role = SUPER_ADMIN_EMAILS.includes(email)
         ? "superadmin"

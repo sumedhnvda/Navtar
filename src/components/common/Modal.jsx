@@ -3,7 +3,6 @@ import './Modal.css';
 
 function Modal({ isOpen, onClose, title, children, footer }) {
   useEffect(() => {
-    // Prevent body scrolling when modal is open
     if (isOpen) {
       document.body.style.overflow = 'hidden';
     } else {

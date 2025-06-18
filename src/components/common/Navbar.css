@@ -18,12 +18,16 @@
 .navbar-logo {
   display: flex;
   align-items: center;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
+  transition: all 0.2s ease;
+  user-select: none;
+  text-shadow: -1px 1px 0 var(--primary-blue), 1px -1px 0 var(--secondary-blue),
+    -1px -2px 0 var(--primary-blue);
 }
 
 .navbar-logo:hover {
   opacity: 0.9;
+  text-shadow: 1px 1px 0 var(--primary-dark), 1px 1px 0 var(--secondary-blue),
+    1px 2px 0 var(--primary-dark);
 }
 
 .logo-img {
@@ -32,7 +36,8 @@
 }
 
 .logo-text {
-  font-size: 1.5rem;
+  font-size: 2rem;
+  cursor: pointer;
   font-weight: 700;
   color: var(--primary-blue);
 }
@@ -53,6 +58,7 @@
     display: none;
   }
 }
+
 .btn-admin {
   background-color: var(--primary-blue);
   color: white;
@@ -66,5 +72,5 @@
 }
 
 .btn-admin:hover {
-  background-color: #004c9a; 
+  background-color: #004c9a;
 }

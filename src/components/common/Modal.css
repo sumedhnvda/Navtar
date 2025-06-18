@@ -24,35 +24,36 @@
 
 .modal-header {
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--light-gray);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
+.modal-body {
+  text-align: center;
+  padding: 0.5rem;
+}
+
 .modal-close {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 2rem;
   cursor: pointer;
   color: var(--medium-gray);
-  transition: color 0.2s ease;
+  transition: color 0.4s ease;
 }
 
+.time-options button.close:hover,
 .modal-close:hover {
-  color: var(--text-primary);
-}
-
-.modal-body {
-  padding: 1.5rem;
+  color: red;
 }
 
 .modal-footer {
+  margin-top: 1rem;
   padding: 1.25rem 1.5rem;
   border-top: 1px solid var(--light-gray);
   display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
+  justify-content: space-evenly;
 }
 
 @keyframes fadeIn {

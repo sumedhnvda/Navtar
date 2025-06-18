@@ -8,7 +8,7 @@ function Login() {
         <div className="login-card">
           <SignIn 
             signUpUrl="/signup"
-            forceRedirectUrl={"/landingpage"}
+            forceRedirectUrl="/"
           />
         </div>
       </div>
