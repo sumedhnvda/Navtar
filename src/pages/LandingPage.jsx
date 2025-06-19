@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@clerk/clerk-react'; 
 import Navbar from '../components/common/Navbar';
 import './LandingPage.css';
-import logo from "../assets/logo.png";  // Clean up the comment
+import logo from "../assets/logo.png";
 
 function LandingPage() {
   const navigate = useNavigate();
+  const { isSignedIn } = useAuth(); 
 
   return (
     <div className="landing-page">
@@ -20,12 +22,11 @@ function LandingPage() {
               allowing doctors to remotely navigate to patients ward of beds for
               face-to-face consultations with patients, relatives, and nursing staff.
             </p>
-            
           </div>
           
           <div className="hero-image slide-in-up">
             <img 
-              src={logo}   // Fix: Use the imported logo variable in curly braces
+              src={logo}
               alt="Medical robot with video conferencing"
               className="robot-image"
             />
@@ -49,7 +50,17 @@ function LandingPage() {
             <p>Intuitive joystick controls for precise robot movement to patient bedsides.</p>
           </div>
           
-          <div className="feature-card fade-in">
+          <div
+            className="feature-card fade-in"
+            style={{ cursor: isSignedIn ? 'pointer' : 'not-allowed', opacity: isSignedIn ? 1 : 0.6 }}
+            onClick={() => {
+              if (isSignedIn) {
+                navigate('/booking');
+              } else {
+                alert('Please log in to access Smart Scheduling.');
+              }
+            }}
+          >
             <div className="feature-icon">📅</div>
             <h3>Smart Scheduling</h3>
             <p>Efficient robot booking system to optimize doctor time and patient care.</p>
