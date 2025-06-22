@@ -6,8 +6,9 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  text-align: center;
 }
-
+/* 
 .joystick-title {
   display: flex;
   justify-content: space-between;
@@ -18,7 +19,7 @@
 .joystick-title h3 {
   margin: 0;
   color: var(--primary-blue);
-}
+} */
 
 .status-indicator {
   padding: 0.25rem 0.75rem;
@@ -78,10 +79,14 @@
   flex-shrink: 0;
 }
 
-.joystick-handle {
+.joystick-handle.ready {
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary-blue) 0%,
+    var(--primary-dark) 100%
+  );
   border-radius: 50%;
   position: absolute;
   top: 50%;
@@ -91,6 +96,10 @@
   cursor: grab;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   transition: box-shadow 0.2s ease;
+}
+
+.joystick-handle.waiting {
+  background: var(--warning-yellow);
 }
 
 .joystick-handle:active {
@@ -143,16 +152,37 @@
   margin-bottom: 0.5rem;
 }
 
-/* Make the joystick responsive */
 @media (max-width: 768px) {
   .joystick-base {
     width: 150px;
     height: 150px;
   }
-  
+
   .joystick-handle {
     width: 60px;
     height: 60px;
     margin: -30px 0 0 -30px;
   }
+}
+.connection-status {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--off-white);
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.connection-status span.connected {
+  color: var(--success-green);
+}
+.connection-status span.disconnected {
+  color: red;
+}
+.connection-status span.waiting {
+  color: var(--warning-yellow);
+}
+.connection-status span.ready {
+  color: var(--success-green);
 }
