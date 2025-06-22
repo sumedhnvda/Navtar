@@ -211,10 +211,6 @@ function JoystickControl() {
           <span className="stat-label">Direction:</span>
           <span className="stat-value">{direction}</span>
         </div>
-        <div className="stat">
-          <span className="stat-label">Speed:</span>
-          <span className="stat-value">{speed}%</span>
-        </div>
       </div>
 
       <div
